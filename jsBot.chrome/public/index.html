@@ -1,0 +1,57 @@
+<html>
+  <head>
+    <script type="text/javascript" src="https://code.jquery.com/jquery-3.1.1.min.js"></script>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <h1>Test Page</h1>
+    <ul>
+      <li>
+        <a id="event1">Event1</a>
+      </li>
+      <li>
+        <a id="event2">Event2</a>
+      </li>
+      <li>
+        <a id="event0">Event0</a>
+      </li>
+      <li>
+        <a id="link1" href="http://piserver.at">Real Link</a>
+      </li>
+    </ul>
+    <div id="text-target1">null - 1</div>
+    <br/>
+    <div id="text-target2">
+      null - 2
+      <div id="text-target3">
+        <a id="event3">Event3</a>
+      </div>
+    </div>
+    <br/>
+
+    <script type="text/javascript">
+      //console.log($('#event1'));
+
+      $('#event0').click(function(){
+        window.location = 'http://piserver.at';
+      });
+
+      $('#event1').click(function(){
+        $('#text-target1').html("Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.");
+        //alert('stop');
+        //window.location = 'http://piserver.at';
+      });
+      $('#event3').click(function(){
+        $('#text-target3').html("Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.");
+        //window.location = 'http://piserver.at';
+      });
+
+      var ev2 = document.getElementById("event2");
+      ev2.addEventListener("click", function(){
+        document.getElementById("text-target2").innerHTML = "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.";
+      }, false);
+    </script>
+  </body>
+</html>

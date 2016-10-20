@@ -1,0 +1,14 @@
+# Development-related files
+.tern-port
+coverage/
+/node_modules/
+
+# User-specific files
+conf.json
+
+# Generated files
+test/tutorials/out
+out/
+
+# Dotfile detritus
+.DS_Store
