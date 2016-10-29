@@ -2,7 +2,7 @@
   "manifest_version": 2,
 
   "name": "jsBot",
-  "description": "jsBot Bakk prg",
+  "description": "jsBot bakk sae wdd",
   "version": "1.0",
   "browser_action": {
      "default_icon": "/images/icons/icon128.png",
@@ -13,18 +13,16 @@
     "48": "/images/icons/icon48.png",
     "128": "/images/icons/icon128.png"
   },
-
-  "content_scripts":[
-    {
-      "matches":["*://*/"],
-      "js":["./public/jsBotComp.js"]
-    }
-  ],
-
+  "automation": {
+    "desktop":true,
+    "interact":true
+  },
   "background": {
-    "scripts": ["./src/chrome.init.test.js"],
+    "scripts": [
+      "./src/chrome.actions.js",
+      "./src/jsBotStorage.js"
+    ],
     "persistent": false
   },
-
-  "permissions": [ "webNavigation","contextMenus","tabs","*://*/" ]
+  "permissions": [ "webNavigation","contextMenus","tabs","*://*/*" ]
 }
