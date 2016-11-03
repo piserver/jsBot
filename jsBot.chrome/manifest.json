@@ -19,10 +19,18 @@
   },
   "background": {
     "scripts": [
-      "./src/chrome.actions.js",
-      "./src/jsBotStorage.js"
+      "./bower_components/async/dist/async.min.js",
+      "./src/jsBotUtils.js",
+      "./src/jsBotStorage.js",
+      "./src/chrome.init.js"
     ],
     "persistent": false
   },
-  "permissions": [ "webNavigation","contextMenus","tabs","*://*/*" ]
+  "permissions": [
+    "declarativeWebRequest",
+    "webNavigation",
+    "contextMenus",
+    "tabs",
+    "*://*/*"
+  ]
 }

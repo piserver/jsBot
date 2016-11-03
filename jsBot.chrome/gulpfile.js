@@ -7,6 +7,7 @@ var concat = require('gulp-concat');
 gulp.task('js', function (cb) {
 	pump([
 		gulp.src([
+			'./bower_components/js-md5/build/md5.min.js',
 			'./bower_components/async/dist/async.min.js',
 			'./bower_components/jquery/dist/jquery.min.js',
 			'./src/difflib.js',

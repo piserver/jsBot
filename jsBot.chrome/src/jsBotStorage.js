@@ -1,101 +1,166 @@
 Error.stackTraceLimit = Infinity;
 
-var jsBotStorage = function(target) {
-  this.store = {
-    active:false,
-    rootNode:"body",
-    targetAddr:"http://localhost/",
-    layerMultiplier:100000,
-    tests:['click','hover'],
-    traverseWait:200,
-    traverseComplete:false,
-    traversalStage:0,
-    crawlCounter:{
-      "id":"page",
-      "url":"",
-      'htmlChars':0,
-      'htmlLinks':0,
-      'jsLinks':0,
-      'jsChars':0
-    },
-    crawlMemory:[]
-  }
-  if(target != undefined) {
-    this.store.targetAddr = targetAddr;
-  }
-  this.browser = {
-    targetTab:null
-  }
-}
-jsBotStorage.prototype.browserTabUpdate = function() {
+var jsBotStorage = function(targetAddr,tabId) {
+  this.rootNode = 'body';
+  this.targetAddr = targetAddr;
+  this.tabId = tabId;
+  this.active = false;
+  this.nodes = {};
+  this.tests = ['click'];
+  this.mappingState = false;
+  this.traverseWait = 200;
+  this.traversalStage = 0;
+  this.traverseComplete = false;
 
+  this.baseHTML = '';
+  this.harvestHTML = [];
+  this.harvestLinksHTML = [];
+  this.harvestLinksJS = [];
 }
-jsBotStorage.prototype.read = function(request,sender,sendResponse) {
-  sendResponse(this.store);
-}
-jsBotStorage.prototype.write = function(request,sender,sendResponse) {
-  jsBotStorage[request.id] = request.content;
-}
-jsBotStorage.prototype.append = function(request,sender,sendResponse) {
-  for(idx in request) {
-    this.store.crawlMemory[request[idx].arrayId][request[idx].objKey] = request[idx].dat;
+jsBotStorage.prototype.getStore = function() {
+  return {
+    rootNode:this.rootNode,
+    targetAddr:this.targetAddr,
+    tabId:this.tabId,
+    active:this.active,
+    nodes:this.nodes,
+    eventsWait:this.eventsWait,
+    tests:this.tests,
+    traverseWait:this.traverseWait,
+    traversalStage:this.traversalStage,
+    traverseComplete:this.traverseComplete,
+    crawlCounter:this.crawlCounter
   }
 }
-jsBotStorage.prototype.push = function(request,sender,sendResponse) {
-  for(idx in request) {
-    this.store.crawlMemory[request[idx].arrayId][request[idx].objKey].push(request[idx].dat);
+jsBotStorage.prototype.getStoreResults = function() {
+  return {
+    targetAddr:this.targetAddr,
+    baseHTML:this.baseHTML,
+    harvestHTML:this.harvestHTML,
+    harvestLinksHTML:this.harvestLinksHTML,
+    harvestLinksJS:this.harvestLinksJS
   }
 }
-jsBotStorage.prototype.writeCrawlCounter = function(request,sender,sendResponse) {
-  this.store.crawlCounter[request.id] = request.value;
+jsBotStorage.prototype.setBaseHTML = function(html) {
+  this.baseHTML = html;
 }
-jsBotStorage.prototype.writeCountNode = function(request,sender,sendResponse) {
-  this.store.crawlCounter[request.id] += request.html.replace(/\s/g,'').length;
-}
-jsBotStorage.prototype.increment = function(request,sender,sendResponse) {
-  this.store.crawlCounter[request]++;
-}
-jsBotStorage.prototype.traverseComplete = function(request,sender,sendResponse) {
-  if(this.store.traversalStage < this.store.tests.length) {
-    this.store.traversalStage++;
-  }
-  if(this.store.traversalStage >= this.store.tests.length) {
-    console.log('complete',this.store.traversalStage,this.store);
-    this.store.traverseComplete = true;
-    sendResponse('complete');
+jsBotStorage.prototype.appendBaseHTML = function(html) {
+  if(this.baseHTML != undefined) {
+    //var htmlProcess = html.replace(/\s/g,'');
+    this.baseHTML += html;
+    return true;
   } else {
-    console.log('reload',this.store.traversalStage);
-    sendResponse('reload');
+    return false;
   }
 }
-
-var session = new jsBotStorage();
-
-chrome.runtime.onMessage.addListener(
-  function(request,sender,sendResponse) {
-    if(request == 'read') {
-      session.read(request,sender,sendResponse);
-    }
-    if(request.write) {
-      session.write(request.write,sender,sendResponse);
-    }
-    if(request.append) {
-      session.write(request.append,sender,sendResponse);
-    }
-    if(request.push) {
-      session.write(request.push,sender,sendResponse);
-    }
-    if(request.crawlCounter) {
-      session.write(request.crawlCounter,sender,sendResponse);
-    }
-    if(request.countNode) {
-      session.write(request.countNode,sender,sendResponse);
-    }
-    if(request.increment) {
-      session.write(request.increment,sender,sendResponse);
-    }
-    if(request == 'traverseComplete') {
-      session.write(request,sender,sendResponse);
-    }
+jsBotStorage.prototype.appendHarvestHTML = function(diff) {
+  this.harvestHTML.push(diff);
+}
+jsBotStorage.prototype.appendLinksHTML = function(url) {
+  if(url != null && url != undefined && url != '') {
+    this.harvestLinksHTML.push(url);
+    return true;
   }
-);
+  return false;
+}
+jsBotStorage.prototype.appendHarvestLinksJS = function(url) {
+  if(url != null && url != undefined && url != '') {
+    this.harvestLinksJS.push(url);
+  }
+}
+jsBotStorage.prototype.updateMappingState = function(state) {
+  this.mappingState = state;
+}
+jsBotStorage.prototype.getMappingState = function() {
+  return this.mappingState;
+}
+jsBotStorage.prototype.setActive = function(state) {
+  if(this.active != undefined) {
+    this.active = state;
+    return true;
+  } else {
+    return false;
+  }
+}
+jsBotStorage.prototype.getActive = function() {
+  if(this.active != undefined) {
+    return this.active;
+  } else {
+    return false;
+  }
+}
+jsBotStorage.prototype.getTargetAddress = function() {
+  if(this.targetAddr != undefined) {
+    return targetAddr;
+  } else {
+    return false;
+  }
+}
+jsBotStorage.prototype.getCrawlCounter = function(key,value) {
+  if(this.crawlCounter[key] != undefined) {
+    return value;
+  } else {
+    return false;
+  }
+}
+jsBotStorage.prototype.updateCrawlCounter = function(key,value) {
+  if(this.crawlCounter[key] != undefined) {
+    if(value == 'increment') {
+      this.crawlCounter[key] = this.crawlCounter[key]++;
+    } else {
+      this.crawlCounter[key] = value;
+    }
+    return true;
+  } else {
+    return false;
+  }
+}
+jsBotStorage.prototype.callTraverseComplete = function() {
+  if(this.traversalStage < this.tests.length) {
+    this.traversalStage++;
+  }
+  if(this.traversalStage >= this.tests.length) {
+    this.traverseComplete = true;
+    return 'complete';
+  } else {
+    return 'reload';
+  }
+}
+jsBotStorage.prototype.updateNodes = function(nodes) {
+  this.nodes = nodes;
+  return true;
+}
+jsBotStorage.prototype.createNode = function(nodeId) {
+  if(this.nodes[nodeId] == undefined) {
+    this.nodes[nodeId] = {};
+    return true;
+  } else {
+    return false;
+  }
+}
+jsBotStorage.prototype.updateNode = function(nodeId,key,value) {
+  if(this.nodes[nodeId] != undefined) {
+    if(value == 'increment') {
+      if(typeof(this.nodes[nodeId][key]) == 'number') {
+        this.nodes[nodeId][key]++;
+      } else {
+        this.nodes[nodeId][key] = 0;
+      }
+    } else {
+      this.nodes[nodeId][key] = value;
+    }
+    return true;
+  } else {
+    return false;
+  }
+}
+jsBotStorage.prototype.getNodes = function() {
+  return this.nodes;
+}
+jsBotStorage.prototype.getNode = function(nodeId) {
+  if(this.nodes[nodeId]) {
+    return this.nodes[nodeId];
+  } else {
+    return false;
+  }
+}

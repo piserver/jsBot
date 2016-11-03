@@ -9,13 +9,13 @@
     <h1>Test Page</h1>
     <ul>
       <li>
-        <a id="event1">Event1</a>
+        <a id="event0">Event0</a>
       </li>
       <li>
         <a id="event2">Event2</a>
       </li>
       <li>
-        <a id="event0">Event0</a>
+        <a id="event1">Event1</a>
       </li>
       <li>
         <a id="link1" href="http://piserver.at">Real Link</a>
@@ -35,8 +35,9 @@
       //console.log($('#event1'));
 
       $('#event0').click(function(){
-        //window.open("http://derstandard.at/Web?_chron=t",target="_blank");
-        window.location = 'http://piserver.at';
+        window.open("http://derstandard.at/Web?_chron=t",target="_blank");
+        //alert('return');
+        //window.location = 'http://piserver.at';
       });
 
       $('#event1').click(function(){
