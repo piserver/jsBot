@@ -36,6 +36,7 @@ function init(tab,reload) {
     function(params,callback) {
       var execCode = "new jsBotClient("+params.tab.id+");";
       chrome.tabs.executeScript(
+        params.tab.id,
         { code:execCode },
         function() {
           callback(null,params);
@@ -90,20 +91,15 @@ chrome.tabs.onUpdated.addListener(
         /** State where url is diffrent tab is target - target was changed */
         if(tab.url != store[tabId].targetAddr && store[tabId].tabId == tabId) {
           console.log('load-complete: otherPage & targetTab');
-          jsBotUtils.traverseRecover(tab.id,tab.url,false,function(){
-            clearCache(function(){
-              chrome.tabs.update(tabId,{url:store[tabId].targetAddr});
-            });
+          store[tabId].appendHarvestLinksJS(tab.url);
+          clearCache(function(){
+            chrome.tabs.update(tabId,{url:store[tabId].targetAddr});
           });
         }
         /** State where url is different and tab is different - new tab */
         if(tab.url != store[tabId].targetAddr && store[tabId].tabId != tabId) {
           console.log('load-complete: otherPage & otherTab');
-          jsBotUtils.traverseRecover(tab.url,true,function(){
-            /*chrome.tabs.remove(tabId,function(){
-              console.log('closed-tab: ',tabId);
-            });*/
-          });
+          store[tabId].appendHarvestLinksJS(tab.url);
         }
       }
     }

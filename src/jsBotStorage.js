@@ -5,12 +5,15 @@ var jsBotStorage = function(targetAddr,tabId,callback) {
   this.targetAddr = targetAddr;
   this.tabId = tabId;
   this.active = false;
-  this.nodes = {};
+  this.nodes = [];
+  this.nodesTraversed = [];
   this.tests = ['click'];
   this.mappingState = false;
   this.traverseWait = 200;
   this.traversalStage = 0;
   this.traverseComplete = false;
+  this.timeStart = null;
+  this.timeEnd = null;
 
   this.baseHTML = '';
   this.harvestHTML = [];
@@ -25,7 +28,7 @@ jsBotStorage.prototype.getStore = function() {
     targetAddr:this.targetAddr,
     tabId:this.tabId,
     active:this.active,
-    nodes:this.nodes,
+    nodesTraversed:this.nodesTraversed,
     tests:this.tests,
     traverseWait:this.traverseWait,
     traversalStage:this.traversalStage,
@@ -40,6 +43,15 @@ jsBotStorage.prototype.getStoreResults = function() {
     harvestLinksHTML:this.harvestLinksHTML,
     harvestLinksJS:this.harvestLinksJS
   }
+}
+jsBotStorage.prototype.setTimeEnd = function() {
+  this.timeEnd = new Date().getTime();
+}
+jsBotStorage.prototype.setTimeStart = function() {
+  this.timeStart = new Date().getTime();
+}
+jsBotStorage.prototype.setActive = function(state) {
+  this.active = state;
 }
 jsBotStorage.prototype.setBaseHTML = function(html) {
   this.baseHTML = html;
@@ -130,38 +142,16 @@ jsBotStorage.prototype.updateNodes = function(nodes) {
   this.nodes = nodes;
   return true;
 }
-jsBotStorage.prototype.createNode = function(nodeId) {
-  if(this.nodes[nodeId] == undefined) {
-    this.nodes[nodeId] = {};
-    return true;
-  } else {
-    return false;
-  }
+jsBotStorage.prototype.pushNode = function(nodeId) {
+  this.nodes.push(nodeId);
+  return true;
 }
-jsBotStorage.prototype.updateNode = function(nodeId,key,value) {
-  //console.log('jsBotStorage.prototype.updateNode: ',nodeId,key,value);
-  if(this.nodes[nodeId] != undefined) {
-    if(value == 'increment') {
-      if(this.nodes[nodeId][key] != undefined) {
-        this.nodes[nodeId][key]++;
-      } else {
-        this.nodes[nodeId][key] = 0;
-      }
-    } else {
-      this.nodes[nodeId][key] = value;
-    }
-    return true;
-  } else {
-    return false;
-  }
+jsBotStorage.prototype.createTraverseNodes = function() {
+  this.nodesTraversed = this.nodes.slice();
+}
+jsBotStorage.prototype.popTraverseNode = function(nodeId) {
+  return this.nodesTraversed.pop();
 }
 jsBotStorage.prototype.getNodes = function() {
   return this.nodes;
-}
-jsBotStorage.prototype.getNode = function(nodeId) {
-  if(this.nodes[nodeId]) {
-    return this.nodes[nodeId];
-  } else {
-    return false;
-  }
 }

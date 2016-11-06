@@ -16,16 +16,16 @@ var jsBotClient = function(tabId) {
   * @protected {Sting} targetAddr
   */
   this.visual = new jsBotClient.visual();
-  this.traversalActive = false;
   this.traverseComplete = false;
   this.tabId = tabId;
+  this.nodeIdAppTxt = 'jsb';
 
   async.series(
     [
       this.loadStore.bind(this),
-      this.baseHTML.bind(this),
-      this.initChecks.bind(this),
+      this.initSet.bind(this),
       this.initMap.bind(this),
+      this.initChecks.bind(this),
       this.initTraverse.bind(this)
     ],
     this.finalize.bind(this)
@@ -35,10 +35,10 @@ jsBotClient.prototype.loadStore = function(callback) {
   this.storeAPI(
     'getStore',undefined,
     function(storeObj) {
-      console.log('storeObj: ',storeObj);
       this.rootNode = storeObj.rootNode;
       this.targetAddr = storeObj.targetAddr;
-      this.nodes = storeObj.nodes;
+      this.nodesTraversed = storeObj.nodesTraversed;
+      this.active = storeObj.active;
       this.tests = storeObj.tests;
       this.traverseWait = storeObj.traverseWait;
       this.traversalStage = storeObj.traversalStage;
@@ -55,28 +55,48 @@ jsBotClient.prototype.loadStore = function(callback) {
     }.bind(this)
   );
 }
-jsBotClient.prototype.baseHTML = function(callback) {
-  this.storeAPI(
-    'setBaseHTML',[jQuery(this.rootNode).html()],
-    function() {
-      callback();
-    }
-  );
+jsBotClient.prototype.initSet = function(callback) {
+  if(!this.active) {
+    this.storeAPI(
+      'setActive',[true],
+      function() {
+        this.storeAPI(
+          'setTimeStart',undefined,
+          function() {
+            this.storeAPI(
+              'setBaseHTML',[jQuery(this.rootNode).html()],
+              function() {
+                callback();
+              }.bind(this)
+            );
+          }.bind(this)
+        );
+      }.bind(this)
+    );
+  } else {
+    callback();
+  }
 }
 jsBotClient.prototype.initChecks = function(callback) {
-  if(Object.keys(this.nodes).length > 0) {
-    /** Visual: init*/
-    this.visual.display('init','Recovering after reload');
-
-    this.traversalActive = true;
-  } else {
-    /** Visual: init*/
-    this.visual.display('init','First initialization');
-  }
   if(this.traverseComplete) {
     callback('complete');
   } else {
-    callback();
+    if(this.nodesTraversed.length > 0) {
+      /** Visual: init*/
+      this.visual.display('init','Recovering after reload');
+
+      callback();
+    } else {
+      /** Visual: init*/
+      this.visual.display('init','re/initialization');
+
+      this.storeAPI(
+        'createTraverseNodes',undefined,
+        function() {
+          callback();
+        }.bind(this)
+      );
+    }
   }
 }
 jsBotClient.prototype.initMap = function(callback) {
@@ -117,10 +137,12 @@ jsBotClient.prototype.finalize = function(breaker) {
       function(action) {
         if(action == 'complete') {
           /** Shows JSON after all test have been completed.*/
-          showComplete();
-        } else if(action == 'reload') {
-          /** Reloads page at the end of every traversal stage.*/
-          window.location.href = this.targetAddr;
+          this.storeAPI(
+            'setTimeEnd',undefined,
+            function() {
+              showComplete();
+            }.bind(this)
+          );
         }
       }.bind(this)
     );
@@ -145,7 +167,7 @@ jsBotClient.prototype.genMap = function(node,itId,itLayer,itElement,callbackNode
       function(callbackStoreNode) {
         if(itId != '') {
           this.storeAPI(
-            'createNode',[itId],
+            'pushNode',[itId],
             function() {
               callbackStoreNode();
             }
@@ -170,7 +192,7 @@ jsBotClient.prototype.genMap = function(node,itId,itLayer,itElement,callbackNode
         function(child,callbackChild){
           if(jQuery(child).prop("tagName") != 'SCRIPT') {
             itElement++;
-            itId = 'jsb'+md5(itId+itLayer+itElement);
+            itId = this.nodeIdAppTxt+md5(itId+itLayer+itElement);
             this.genMap(child,itId,itLayer,itElement,function() {
               callbackChild();
             }.bind(this));
@@ -186,35 +208,37 @@ jsBotClient.prototype.genMap = function(node,itId,itLayer,itElement,callbackNode
   );
 }
 jsBotClient.prototype.traverse = function(traverseMapCallback) {
-  async.eachOfSeries(
-    this.nodes,
-    function(node,key,callbackNode) {
+  var node = null;
+  async.during(
+    function(callback) {
+      this.storeAPI(
+        'popTraverseNode',undefined,
+        function(nodeId) {
+          if(nodeId != undefined) {
+            node = nodeId;
+            callback(null,true);
+          } else {
+            console.log('node: ',false);
+            callback(null,false);
+          }
+        }.bind(this)
+      );
+    }.bind(this),
+    function(callbackNode) {
       async.waterfall([
         function(callback) {
-          var traverseState = {
+          var state = {
             node:node,
-            key:key,
             htmlPre:null,
             htmlPost:null,
             skip:false
           }
-          if(node.traversed != undefined) {
-            if(node.traversed == this.traversalStage) {
-              /** Visual: init*/
-              this.visual.display('Skipping',
-                'stage: '+this.traversalStage+
-                ' - node: '+traverseState.key
-              );
-              traverseState.skip = true;
-            }
-          }
-          callback(null,traverseState);
+          callback(null,state);
         }.bind(this),
         jsBotClient.traverse.links.bind(this),
         jsBotClient.traverse.pre.bind(this),
         jsBotClient.traverse.test.bind(this),
         jsBotClient.traverse.post.bind(this),
-        jsBotClient.traverse.markTraversal.bind(this),
         jsBotClient.traverse.analyzeDiff.bind(this)
       ],function(res,err){
         callbackNode();
@@ -227,66 +251,16 @@ jsBotClient.prototype.traverse = function(traverseMapCallback) {
 }
 jsBotClient.traverse = {
   'links':function(state,callback) {
-    if(!state.skip) {
-      var node = document.getElementsByClassName(state.key)[0];
-      if(jQuery(node).prop("tagName") == 'A') {
-        var href = jQuery(node).attr('href');
-        this.storeAPI(
-          'appendLinksHTML',[href],
-          function() {
-            if(href != undefined) {
-              jQuery(node).removeAttr('href');
-              jQuery(node).removeAttr('target');
-            }
-            callback(null,state);
-          }.bind(this)
-        );
-      } else {
-        callback(null,state);
-      }
-    } else {
-      callback(null,state);
-    }
-  },
-  'pre':function(state,callback) {
-    if(!state.skip) {
-      state.htmlPre = $(this.rootNode).html();
-      callback(null,state);
-    } else {
-      callback(null,state);
-    }
-  },
-  'post':function(state,callback) {
-    if(!state.skip) {
-      state.htmlPost = $(this.rootNode).html();
-      callback(null,state);
-    } else {
-      callback(null,state);
-    }
-  },
-  'test':function(state,callback) {
-    if(!state.skip) {
-      var node = document.getElementsByClassName(state.key)[0];
-
-      this.visual.display('Testing',
-        'stage: '+this.traversalStage+
-        ' - node: '+state.key
-      );
-
-      jsBotClient.testFunctions[this.tests[this.traversalStage]](node);
-
-      window.setTimeout(function() {
-        callback(null,state);
-      }.bind(this),this.traverseWait);
-    } else {
-      callback(null,state);
-    }
-  },
-  'markTraversal':function(state,callback) {
-    if(!state.skip) {
+    var node = document.getElementsByClassName(state.node)[0];
+    if(jQuery(node).prop("tagName") == 'A') {
+      var href = jQuery(node).attr('href');
       this.storeAPI(
-        'updateNode',[state.key,'traversed','increment'],
+        'appendLinksHTML',[href],
         function() {
+          if(href != undefined) {
+            jQuery(node).removeAttr('href');
+            jQuery(node).removeAttr('target');
+          }
           callback(null,state);
         }.bind(this)
       );
@@ -294,25 +268,43 @@ jsBotClient.traverse = {
       callback(null,state);
     }
   },
-  'analyzeDiff':function(state,callback) {
-    if(!state.skip) {
-      diff = this.diff(state.htmlPre,state.htmlPost);
+  'pre':function(state,callback) {
+    state.htmlPre = $(this.rootNode).html();
+    callback(null,state);
+  },
+  'post':function(state,callback) {
+    state.htmlPost = $(this.rootNode).html();
+    callback(null,state);
+  },
+  'test':function(state,callback) {
+    var node = document.getElementsByClassName(state.node)[0];
 
-      if(diff.length > 0) {
-        this.storeAPI(
-          'appendHarvestHTML',[
-            {
-              'test':this.tests[this.traversalStage],
-              'diff':diff
-            }
-          ],
-          function() {
-            callback(null,state);
-          }.bind(this)
-        );
-      } else {
-        callback(null,state);
-      }
+    this.visual.display('Testing',
+      'stage: '+this.traversalStage+
+      ' - node: '+state.node
+    );
+
+    jsBotClient.testFunctions[this.tests[this.traversalStage]](node);
+
+    window.setTimeout(function() {
+      callback(null,state);
+    }.bind(this),this.traverseWait);
+  },
+  'analyzeDiff':function(state,callback) {
+    diff = this.diff(state.htmlPre,state.htmlPost);
+
+    if(diff.length > 0) {
+      this.storeAPI(
+        'appendHarvestHTML',[
+          {
+            'test':this.tests[this.traversalStage],
+            'diff':diff
+          }
+        ],
+        function() {
+          callback(null,state);
+        }.bind(this)
+      );
     } else {
       callback(null,state);
     }
