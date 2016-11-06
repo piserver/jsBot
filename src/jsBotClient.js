@@ -1,5 +1,3 @@
-Error.stackTraceLimit = Infinity;
-
  /**
  * jsBotClient Class
  * Intened as content_scripts in a Google Chrome Extension.
@@ -12,26 +10,15 @@ Error.stackTraceLimit = Infinity;
  * - jquery | jQuery library - Copyright jQuery Foundation and other contributors
  * @class
  */
-var jsBotClient = function() {
+var jsBotClient = function(tabId) {
   /**
   * Current url being targeted.
   * @protected {Sting} targetAddr
-  * Root HTML tag to crawl/itterate over.
-  * @protected {Sting} rootNode
-  * Map of all marked nodes under rootNode and their collected information.
-  * @protected {Array} crawlMemory
-  * Current state of crawl/traversal.
-  * @protected {Object} traverseState
-  * Constant used as the maximum depth to id nodes under rootNode.
-  * @constant {Number} layerMultiplier
-  * Constant determening the wait in milliseconds after every interaction.
-  * @constant {Number} traverseWait
-  * Sets the amount of tests to run.
-  * @protected {Array} tests
   */
   this.visual = new jsBotClient.visual();
   this.traversalActive = false;
   this.traverseComplete = false;
+  this.tabId = tabId;
 
   async.series(
     [
@@ -45,13 +32,12 @@ var jsBotClient = function() {
   );
 }
 jsBotClient.prototype.loadStore = function(callback) {
-  jsBotClient.storeAPI(
+  this.storeAPI(
     'getStore',undefined,
     function(storeObj) {
+      console.log('storeObj: ',storeObj);
       this.rootNode = storeObj.rootNode;
       this.targetAddr = storeObj.targetAddr;
-      this.tabId = storeObj.tabId;
-      this.active = storeObj.active;
       this.nodes = storeObj.nodes;
       this.tests = storeObj.tests;
       this.traverseWait = storeObj.traverseWait;
@@ -70,7 +56,7 @@ jsBotClient.prototype.loadStore = function(callback) {
   );
 }
 jsBotClient.prototype.baseHTML = function(callback) {
-  jsBotClient.storeAPI(
+  this.storeAPI(
     'setBaseHTML',[jQuery(this.rootNode).html()],
     function() {
       callback();
@@ -95,7 +81,7 @@ jsBotClient.prototype.initChecks = function(callback) {
 }
 jsBotClient.prototype.initMap = function(callback) {
   this.genMap(jQuery(this.rootNode),'',0,0,function() {
-    jsBotClient.storeAPI(
+    this.storeAPI(
       'getNodes',undefined,
       function(nodes) {
         this.nodes = nodes;
@@ -114,7 +100,7 @@ jsBotClient.prototype.initTraverse = function(callback) {
 jsBotClient.prototype.finalize = function(breaker) {
   var showComplete = function() {
     this.visual.display('End','crawling complete');
-    jsBotClient.storeAPI(
+    this.storeAPI(
       'getStoreResults',undefined,
       function(results) {
         this.visual.copyform(JSON.stringify(results,null,' '));
@@ -126,7 +112,7 @@ jsBotClient.prototype.finalize = function(breaker) {
     showComplete();
   } else {
     /** Visual: display finish*/
-    jsBotClient.storeAPI(
+    this.storeAPI(
       'callTraverseComplete',undefined,
       function(action) {
         if(action == 'complete') {
@@ -158,7 +144,7 @@ jsBotClient.prototype.genMap = function(node,itId,itLayer,itElement,callbackNode
     [
       function(callbackStoreNode) {
         if(itId != '') {
-          jsBotClient.storeAPI(
+          this.storeAPI(
             'createNode',[itId],
             function() {
               callbackStoreNode();
@@ -212,13 +198,15 @@ jsBotClient.prototype.traverse = function(traverseMapCallback) {
             htmlPost:null,
             skip:false
           }
-          if(node.traversed == this.traversalStage) {
-            /** Visual: init*/
-            this.visual.display('Skipping',
-              'stage: '+this.traversalStage+
-              ' - node: '+traverseState.key
-            );
-            traverseState.skip = true;
+          if(node.traversed != undefined) {
+            if(node.traversed == this.traversalStage) {
+              /** Visual: init*/
+              this.visual.display('Skipping',
+                'stage: '+this.traversalStage+
+                ' - node: '+traverseState.key
+              );
+              traverseState.skip = true;
+            }
           }
           callback(null,traverseState);
         }.bind(this),
@@ -226,7 +214,8 @@ jsBotClient.prototype.traverse = function(traverseMapCallback) {
         jsBotClient.traverse.pre.bind(this),
         jsBotClient.traverse.test.bind(this),
         jsBotClient.traverse.post.bind(this),
-        jsBotClient.traverse.analyzeDiff.bind(this),
+        jsBotClient.traverse.markTraversal.bind(this),
+        jsBotClient.traverse.analyzeDiff.bind(this)
       ],function(res,err){
         callbackNode();
       });
@@ -242,16 +231,14 @@ jsBotClient.traverse = {
       var node = document.getElementsByClassName(state.key)[0];
       if(jQuery(node).prop("tagName") == 'A') {
         var href = jQuery(node).attr('href');
-        jsBotClient.storeAPI(
+        this.storeAPI(
           'appendLinksHTML',[href],
           function() {
             if(href != undefined) {
               jQuery(node).removeAttr('href');
               jQuery(node).removeAttr('target');
-              callback(null,state);
-            } else {
-              callback(null,state);
             }
+            callback(null,state);
           }.bind(this)
         );
       } else {
@@ -295,36 +282,37 @@ jsBotClient.traverse = {
       callback(null,state);
     }
   },
-  'analyzeDiff':function(state,callback) {
+  'markTraversal':function(state,callback) {
     if(!state.skip) {
-      var node = document.getElementsByClassName(state.key)[0];
-      diff = this.diff(state.htmlPre,state.htmlPost);
-
-      jsBotClient.storeAPI(
-        'updateNode',[state.key,'tagName',jQuery(node).prop("tagName")],
+      this.storeAPI(
+        'updateNode',[state.key,'traversed','increment'],
         function() {
-          jsBotClient.storeAPI(
-            'updateNode',[state.key,'traversed','increment'],
-            function() {
-              if(diff.length > 0) {
-                jsBotClient.storeAPI(
-                  'appendHarvestHTML',[
-                    {
-                      'test':this.tests[this.traversalStage],
-                      'diff':diff
-                    }
-                  ],
-                  function() {
-                    callback(null,state);
-                  }.bind(this)
-                );
-              } else {
-                callback(null,state);
-              }
-            }.bind(this)
-          );
+          callback(null,state);
         }.bind(this)
       );
+    } else {
+      callback(null,state);
+    }
+  },
+  'analyzeDiff':function(state,callback) {
+    if(!state.skip) {
+      diff = this.diff(state.htmlPre,state.htmlPost);
+
+      if(diff.length > 0) {
+        this.storeAPI(
+          'appendHarvestHTML',[
+            {
+              'test':this.tests[this.traversalStage],
+              'diff':diff
+            }
+          ],
+          function() {
+            callback(null,state);
+          }.bind(this)
+        );
+      } else {
+        callback(null,state);
+      }
     } else {
       callback(null,state);
     }
@@ -355,10 +343,11 @@ jsBotClient.prototype.diff = function(current,change) {
     opcodes: opcodes
   });
 }
-jsBotClient.storeAPI = function(method,params,callback) {
+jsBotClient.prototype.storeAPI = function(method,params,callback) {
   var paramObj = {
     method:method,
-    params:[]
+    params:[],
+    tabId:this.tabId
   }
   if(params != undefined) {
     paramObj.params = params;
@@ -422,20 +411,15 @@ jsBotClient.visual.prototype.copyform = function(json,pos) {
     'padding: 0.3%;'+
     'font-size: 10px;'+
   posCss+'"';
-  $('html').append('<textarea '+style+'>'+json+'</textarea>');
+  $('html').append(''+
+    '<textarea id="jsbchoo6AehEiLoo0ohxeex0ohN" '+style+'>'+json+'</textarea>'+
+    '<script type="text/javascript">'+
+      'document.getElementById("jsbchoo6AehEiLoo0ohxeex0ohN").select();'+
+      'document.execCommand("copy");'+
+    '</script>'+
+  '');
+
 }
 jsBotClient.visual.prototype.clear = function() {
   this.visual.html('');
 }
-jsBotClient.tests = {
-  'click':function(node,callback) {
-    node.click();
-    callback();
-  },
-  'hover':function(node,callback) {
-    //node.click();
-    callback();
-  }
-}
-
-new jsBotClient();

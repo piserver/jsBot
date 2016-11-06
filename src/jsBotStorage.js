@@ -1,6 +1,6 @@
 Error.stackTraceLimit = Infinity;
 
-var jsBotStorage = function(targetAddr,tabId) {
+var jsBotStorage = function(targetAddr,tabId,callback) {
   this.rootNode = 'body';
   this.targetAddr = targetAddr;
   this.tabId = tabId;
@@ -16,6 +16,8 @@ var jsBotStorage = function(targetAddr,tabId) {
   this.harvestHTML = [];
   this.harvestLinksHTML = [];
   this.harvestLinksJS = [];
+
+  callback();
 }
 jsBotStorage.prototype.getStore = function() {
   return {
@@ -24,12 +26,10 @@ jsBotStorage.prototype.getStore = function() {
     tabId:this.tabId,
     active:this.active,
     nodes:this.nodes,
-    eventsWait:this.eventsWait,
     tests:this.tests,
     traverseWait:this.traverseWait,
     traversalStage:this.traversalStage,
     traverseComplete:this.traverseComplete,
-    crawlCounter:this.crawlCounter
   }
 }
 jsBotStorage.prototype.getStoreResults = function() {
@@ -139,9 +139,10 @@ jsBotStorage.prototype.createNode = function(nodeId) {
   }
 }
 jsBotStorage.prototype.updateNode = function(nodeId,key,value) {
+  //console.log('jsBotStorage.prototype.updateNode: ',nodeId,key,value);
   if(this.nodes[nodeId] != undefined) {
     if(value == 'increment') {
-      if(typeof(this.nodes[nodeId][key]) == 'number') {
+      if(this.nodes[nodeId][key] != undefined) {
         this.nodes[nodeId][key]++;
       } else {
         this.nodes[nodeId][key] = 0;

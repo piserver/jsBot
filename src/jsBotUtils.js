@@ -1,16 +1,16 @@
 Error.stackTraceLimit = Infinity;
 
 jsBotUtils = {
-  traverseRecover:function(url,tab,traverseMapCallback) {
-    store.appendHarvestLinksJS(url);
+  traverseRecover:function(tabId,url,tab,traverseMapCallback) {
+    store[tabId].appendHarvestLinksJS(url);
     async.eachOfSeries(
-      store.nodes,
+      store[tabId].nodes,
       function(node,key,callbackNode) {
-        if(node.traversed != store.traversalStage) {
+        if(node.traversed != store[tabId].traversalStage) {
           if(tab) {
             callbackNode(true);
           } else {
-            store.updateNode(key,'traversed','increment');
+            store[tabId].updateNode(key,'traversed','increment');
             callbackNode(true);
           }
         } else {
