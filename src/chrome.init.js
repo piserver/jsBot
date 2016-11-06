@@ -89,18 +89,18 @@ chrome.tabs.onUpdated.addListener(
           init(tab,true);
         }
         /** State where url is diffrent tab is target - target was changed */
-        if(tab.url != store[tabId].targetAddr && store[tabId].tabId == tabId) {
+        else if(tab.url != store[tabId].targetAddr && store[tabId].tabId == tabId) {
           console.log('load-complete: otherPage & targetTab');
           store[tabId].appendHarvestLinksJS(tab.url);
           clearCache(function(){
             chrome.tabs.update(tabId,{url:store[tabId].targetAddr});
           });
         }
+      }
+      if(store[tab.openerTabId] != undefined) {
         /** State where url is different and tab is different - new tab */
-        if(tab.url != store[tabId].targetAddr && store[tabId].tabId != tabId) {
-          console.log('load-complete: otherPage & otherTab');
-          store[tabId].appendHarvestLinksJS(tab.url);
-        }
+        console.log('load-complete: otherPage & otherTab');
+        store[tab.openerTabId].appendHarvestLinksJS(tab.url);
       }
     }
   }
