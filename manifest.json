@@ -20,7 +20,6 @@
   "background": {
     "scripts": [
       "./bower_components/async/dist/async.min.js",
-      "./src/jsBotUtils.js",
       "./src/jsBotStorage.js",
       "./src/chrome.init.js"
     ],
