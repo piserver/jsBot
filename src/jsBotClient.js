@@ -8,18 +8,30 @@
  * - difflib | Diff library for identifying change - Copyright (c) 2007, Snowtide Informatics Systems, Inc.
  * - diffview | Modified Diff library view script - Copyright Michael Kuchner & (c) 2007, Snowtide Informatics Systems, Inc.
  * - jquery | jQuery library - Copyright jQuery Foundation and other contributors
+ * - md5 | jQuery library - Copyright jQuery Foundation and other contributors
  * @class
  */
 var jsBotClient = function(tabId) {
   /**
   * Current url being targeted.
-  * @protected {Sting} targetAddr
+  * @protected {Sting} object
+  * Instantiate the visualization element of the jsBotClient program.
+  * @protected {Sting} traverseComplete
+  * State of traversal
+  * @protected {Number} tabId
+  * Number of the current tab Id activated by jsBot
+  * @protected {Sting} nodeIdAppTxt
+  * Txt used for node id md5 markers
   */
   this.visual = new jsBotClient.visual();
   this.traverseComplete = false;
   this.tabId = tabId;
   this.nodeIdAppTxt = 'jsb';
 
+  /**
+  * Initialization of jsBotClient.
+  * Sequential control via async series.
+  */
   async.series(
     [
       this.loadStore.bind(this),
@@ -32,6 +44,9 @@ var jsBotClient = function(tabId) {
   );
 }
 jsBotClient.prototype.loadStore = function(callback) {
+  /**
+  * Store API loads the current state.
+  */
   this.storeAPI(
     'getStore',undefined,
     function(storeObj) {
@@ -56,6 +71,9 @@ jsBotClient.prototype.loadStore = function(callback) {
   );
 }
 jsBotClient.prototype.initSet = function(callback) {
+  /**
+  * Init states, first time activation and BaseHTML for comparison.
+  */
   if(!this.active) {
     this.storeAPI(
       'setActive',[true],
@@ -78,6 +96,9 @@ jsBotClient.prototype.initSet = function(callback) {
   }
 }
 jsBotClient.prototype.initChecks = function(callback) {
+  /**
+  * Verifies if traversal needs to be recovered or if complete.
+  */
   if(this.traverseComplete) {
     callback('complete');
   } else {
@@ -100,6 +121,9 @@ jsBotClient.prototype.initChecks = function(callback) {
   }
 }
 jsBotClient.prototype.initMap = function(callback) {
+  /**
+  * Initiates Maping. This section will be run on every load.
+  */
   this.genMap(jQuery(this.rootNode),'',0,0,function() {
     this.storeAPI(
       'getNodes',undefined,
@@ -112,12 +136,19 @@ jsBotClient.prototype.initMap = function(callback) {
   }.bind(this));
 }
 jsBotClient.prototype.initTraverse = function(callback) {
+  /**
+  * Initiates Traversal post mapping.
+  */
   this.traverse(function(){
     this.visual.display('Traversal','complete');
     callback();
   }.bind(this));
 }
 jsBotClient.prototype.finalize = function(breaker) {
+  /**
+  * Finalization script, completes with crawling results.
+  * If test sequence is not complete, will evoke reload.
+  */
   var showComplete = function() {
     this.visual.display('End','crawling complete');
     this.storeAPI(
@@ -151,12 +182,11 @@ jsBotClient.prototype.finalize = function(breaker) {
 /**
 * jsBotClient#genMap
 * This method is recursive!
-* @param {object} node The current HTML node in recursion
-* @param {number} layer Counter for depth of nodes
-* @param {number} childItr Counter for child nodes visited
-* @param {boolean} save Determines if data is saved to crawlMemory
-* @param {Function} callback Recursive callback
-* @constructor
+* @param {object} node Current node being traversed
+* @param {string} itId  Id for marking nodes
+* @param {number} itLayer Counter for depth of nodes
+* @param {number} itElement Counter for child nodes visited
+* @param {Function} callbackNode Recursive callback
 */
 jsBotClient.prototype.genMap = function(node,itId,itLayer,itElement,callbackNode) {
   /** Create ID and mark as class with prefix */
@@ -192,6 +222,7 @@ jsBotClient.prototype.genMap = function(node,itId,itLayer,itElement,callbackNode
         function(child,callbackChild){
           if(jQuery(child).prop("tagName") != 'SCRIPT') {
             itElement++;
+            /** Create MD5 hash Id */
             itId = this.nodeIdAppTxt+md5(itId+itLayer+itElement);
             this.genMap(child,itId,itLayer,itElement,function() {
               callbackChild();
@@ -207,6 +238,11 @@ jsBotClient.prototype.genMap = function(node,itId,itLayer,itElement,callbackNode
     }.bind(this)
   );
 }
+/**
+* jsBotClient#traverse
+* Traversal states are initiated
+* @param {Function} traverseMapCallback callback
+*/
 jsBotClient.prototype.traverse = function(traverseMapCallback) {
   var node = null;
   async.during(
@@ -250,6 +286,9 @@ jsBotClient.prototype.traverse = function(traverseMapCallback) {
 }
 jsBotClient.traverse = {
   'links':function(state,callback) {
+    /**
+    * Store HTML links.
+    */
     var node = document.getElementsByClassName(state.node)[0];
     if(jQuery(node).prop("tagName") == 'A') {
       var href = jQuery(node).attr('href');
@@ -268,14 +307,23 @@ jsBotClient.traverse = {
     }
   },
   'pre':function(state,callback) {
+    /**
+    * Store HTML before testing.
+    */
     state.htmlPre = $(this.rootNode).html();
     callback(null,state);
   },
   'post':function(state,callback) {
+    /**
+    * Store HTML post testing.
+    */
     state.htmlPost = $(this.rootNode).html();
     callback(null,state);
   },
   'test':function(state,callback) {
+    /**
+    * Run interaction tests.
+    */
     var node = document.getElementsByClassName(state.node)[0];
 
     this.visual.display('Testing',
@@ -283,13 +331,19 @@ jsBotClient.traverse = {
       ' - node: '+state.node
     );
 
+    /** Interaction test executed based on traversalStage currently active. */
     jsBotClient.testFunctions[this.tests[this.traversalStage]](node);
 
+    /** Timeout post interaction. */
     window.setTimeout(function() {
       callback(null,state);
     }.bind(this),this.traverseWait);
   },
   'analyzeDiff':function(state,callback) {
+    /**
+    * Run difflib algorithm.
+    * Store HTML difference if found.
+    */
     diff = this.diff(state.htmlPre,state.htmlPost);
 
     if(diff.length > 0) {
@@ -310,6 +364,9 @@ jsBotClient.traverse = {
   }
 }
 jsBotClient.testFunctions = {
+  /**
+  * Interaction tests.
+  */
   'click':function(node) {
     try {
       node.click();
@@ -322,6 +379,9 @@ jsBotClient.testFunctions = {
   }
 }
 jsBotClient.prototype.diff = function(current,change) {
+  /**
+  * Implementation of difflib, with modified difflibview.
+  */
   var currentDiff = difflib.stringAsLines(current);
   var changeDiff = difflib.stringAsLines(change);
 
@@ -335,6 +395,10 @@ jsBotClient.prototype.diff = function(current,change) {
   });
 }
 jsBotClient.prototype.storeAPI = function(method,params,callback) {
+  /**
+  * StoreAPI call that manages chrome browser communication
+  * between jsBotClient and jsBotStorage
+  */
   var paramObj = {
     method:method,
     params:[],
@@ -349,10 +413,6 @@ jsBotClient.prototype.storeAPI = function(method,params,callback) {
       callback(res);
     }
   );
-}
-
-jsBotClient.prototype.filterResults = function() {
-  JSON.stringify(this.crawlMemory,null,' ')
 }
 jsBotClient.visual = function() {
   var style = 'style="'+
