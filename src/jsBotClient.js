@@ -123,7 +123,7 @@ jsBotClient.prototype.finalize = function(breaker) {
     this.storeAPI(
       'getStoreResults',undefined,
       function(results) {
-        this.visual.copyform(JSON.stringify(results,null,' '));
+        this.visual.copyform(JSON.stringify(results));
       }.bind(this)
     );
   }.bind(this);
@@ -218,7 +218,6 @@ jsBotClient.prototype.traverse = function(traverseMapCallback) {
             node = nodeId;
             callback(null,true);
           } else {
-            console.log('node: ',false);
             callback(null,false);
           }
         }.bind(this)

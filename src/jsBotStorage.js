@@ -58,7 +58,6 @@ jsBotStorage.prototype.setBaseHTML = function(html) {
 }
 jsBotStorage.prototype.appendBaseHTML = function(html) {
   if(this.baseHTML != undefined) {
-    //var htmlProcess = html.replace(/\s/g,'');
     this.baseHTML += html;
     return true;
   } else {

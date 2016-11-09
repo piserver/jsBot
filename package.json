@@ -1,11 +1,13 @@
 {
   "dependencies": {
+    "async": "^2.1.2",
+    "csv": "^1.1.0",
     "gulp": "^3.9.1",
     "gulp-concat": "^2.6.0",
     "gulp-uglify": "^2.0.0",
     "jsdoc": "^3.4.2",
+    "parse-json": "^2.2.0",
     "path": "^0.12.7",
-    "pump": "^1.0.1",
-    "async": "^2.1.2"
+    "pump": "^1.0.1"
   }
 }
