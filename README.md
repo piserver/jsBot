@@ -10,6 +10,9 @@ Contains the main program files:
 - /src/jsBotClient.js: jsBotClient class, used for traversal and injection.
 - /src/jsBotStorage.js: jsBotStorage used as temporary storage for raw results.
 - /src/difflib.js,difflibview.js: Differential script dependencies.
+### Generating jsBotClient file.
+gulp needs to be execute to combine jsBotClient with all its dependencies, before it can be loaded into the chrome extension. The file will appear in the root folder as: jsBotClient.min.js.
+This is necessary to import the Google Chrome Extension.
 
 ## /analyze
 Contains program files for post analysis of raw results:
