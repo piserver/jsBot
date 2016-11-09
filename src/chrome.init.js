@@ -1,7 +1,15 @@
 Error.stackTraceLimit = Infinity;
+/**
+* jsBot Initialization script
+* Manages all state interactions between chrome and jsBotClient
+* and jsBotStorage, as well as browser state coordination.
+*/
 
+
+/** Store Object for all tests running in tabs. */
 var store = {};
 
+/** Initialization */
 function init(tab,reload) {
   async.waterfall([
     function(callback) {
@@ -10,6 +18,7 @@ function init(tab,reload) {
         reload
       }
       if(reload == undefined) {
+        /** Create new storage object if not yet initiated. */
         store[tab.id] = new jsBotStorage(
           tab.url,
           tab.id,
@@ -22,6 +31,7 @@ function init(tab,reload) {
       }
     },
     function(params,callback) {
+      /** Inject jsBotClient. */
       chrome.tabs.executeScript(
         params.tab.id,
         {
@@ -34,6 +44,7 @@ function init(tab,reload) {
       );
     },
     function(params,callback) {
+      /** Initiate jsBotClient with the current tabid. */
       var execCode = "new jsBotClient("+params.tab.id+");";
       chrome.tabs.executeScript(
         params.tab.id,
@@ -47,6 +58,7 @@ function init(tab,reload) {
 
 }
 var clearCache = function(callback) {
+  /** Clear browser cache function */
   chrome.browsingData.remove(
     {
       "since": 0,
@@ -68,6 +80,7 @@ var clearCache = function(callback) {
     callback()
   );
 }
+/** Chrome messaging API between jsBotClient & jsBotStorage */
 chrome.runtime.onMessage.addListener(
   function(request,sender,sendResponse) {
     var ret = store[request.tabId][request.method].apply(
@@ -77,6 +90,7 @@ chrome.runtime.onMessage.addListener(
     sendResponse(ret);
   }
 );
+/** State change cascade for page loads and reloads. */
 chrome.tabs.onUpdated.addListener(
   function(tabId,info,tab) {
     if(info.status == "loading") {

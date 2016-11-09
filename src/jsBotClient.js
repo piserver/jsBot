@@ -9,7 +9,6 @@
  * - diffview | Modified Diff library view script - Copyright Michael Kuchner & (c) 2007, Snowtide Informatics Systems, Inc.
  * - jquery | jQuery library - Copyright jQuery Foundation and other contributors
  * - md5 | jQuery library - Copyright jQuery Foundation and other contributors
- * @class
  */
 var jsBotClient = function(tabId) {
   /**

@@ -1,4 +1,10 @@
 Error.stackTraceLimit = Infinity;
+/**
+* jsBotStorage Class
+* Intened as bacground_script in a Google Chrome Extension.
+* Basic getter setter methods for data and state storage of
+* jsBotClient.
+*/
 
 var jsBotStorage = function(targetAddr,tabId,callback) {
   this.rootNode = 'body';
